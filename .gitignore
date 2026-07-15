@@ -1,0 +1,7 @@
+node_modules/
+session/
+data/
+*.log
+.env
+auth_info/
+auth_info_baileys/

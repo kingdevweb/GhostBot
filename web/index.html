@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ht">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>GhostBot — Admin Panel</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root {
+      --bg:      #060810;
+      --surface: #0d1117;
+      --card:    #111827;
+      --card2:   #1a2234;
+      --border:  #1e2d45;
+      --accent:  #00d4ff;
+      --accent2: #0088cc;
+      --purple:  #a855f7;
+      --green:   #00ff88;
+      --red:     #ff4757;
+      --yellow:  #ffa502;
+      --orange:  #ff6b35;
+      --text:    #e8edf5;
+      --muted:   #6b7a99;
+      --r:       14px;
+      --rs:      10px;
+      --glow:    0 0 20px rgba(0,212,255,.3);
+      --glow-g:  0 0 20px rgba(0,255,136,.3);
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body {
+      background:var(--bg); color:var(--text);
+      font-family:'Segoe UI',-apple-system,sans-serif;
+      min-height:100vh; max-width:480px; margin:0 auto;
+      padding-bottom:72px;
+    }
+    .stats-bar { display:grid; grid-template-columns:1fr 1fr 1fr; border-bottom:1px solid var(--border); }
+    .si { background:var(--surface); padding:11px 8px; text-align:center; }
+    .si .v { font-size:19px; font-weight:800; color:var(--accent); line-height:1; }
+    .si .l { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin-top:3px; }
+    .tab { display:none; padding:14px; }
+    .tab.active { display:block; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:18px; margin-bottom:12px; }
+    .card-title { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+    .card-title::after { content:''; flex:1; height:1px; background:var(--border); }
+    .logo-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:26px 18px; text-align:center; margin-bottom:12px; position:relative; overflow:hidden; }
+    .logo-card::before { content:''; position:absolute; top:-40%; left:-40%; width:180%; height:180%; background:radial-gradient(circle,rgba(0,212,255,.05) 0%,transparent 70%); pointer-events:none; }
+    .logo-img { width:96px; height:96px; border-radius:22px; border:2px solid var(--accent); box-shadow:var(--glow); margin-bottom:12px; }
+    .logo-name { font-size:24px; font-weight:800; background:linear-gradient(135deg,#fff,var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:3px; }
+    .logo-dev { font-size:10px; color:var(--accent); letter-spacing:.18em; text-transform:uppercase; margin-bottom:16px; font-weight:700; }
+    #conn-status { display:inline-flex; align-items:center; gap:7px; padding:9px 20px; border-radius:999px; font-size:12px; font-weight:700; border:1.5px solid var(--border); background:var(--surface); transition:all .3s; }
+    #conn-status.open { border-color:var(--green); color:var(--green); box-shadow:var(--glow-g); }
+    #conn-status.close { border-color:var(--red); color:var(--red); }
+    #conn-status.connecting { border-color:var(--yellow); color:var(--yellow); }
+    .dot { width:7px; height:7px; border-radius:50%; background:currentColor; animation:pulse 1.4s infinite; }
+    #conn-status.open .dot { animation:none; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.2} }
+    .info-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:12px; }
+    .info-box { background:var(--card); border:1px solid var(--border); border-radius:var(--rs); padding:11px; text-align:center; }
+    .info-box .v { font-size:13px; font-weight:700; color:var(--accent); }
+    .info-box .l { font-size:10px; color:var(--muted); margin-top:2px; }
+    .btn { width:100%; padding:13px; border-radius:var(--rs); border:none; background:linear-gradient(135deg,var(--accent2),var(--accent)); color:#000; font-size:14px; font-weight:700; cursor:pointer; transition:all .2s; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:10px; }
+    .btn:hover { opacity:.88; transform:translateY(-1px); }
+    .btn:disabled { opacity:.4; cursor:default; transform:none; }
+    .btn-danger { background:linear-gradient(135deg,#cc0000,var(--red)) !important; color:#fff !important; }
+    .btn-ghost { background:transparent !important; border:1.5px solid var(--border) !important; color:var(--text) !important; }
+    .btn-green { background:linear-gradient(135deg,#00aa55,var(--green)) !important; color:#000 !important; }
+    .btn-sm { width:auto; padding:7px 13px; font-size:12px; border-radius:8px; margin:0; }
+    .mtabs { display:flex; gap:8px; margin-bottom:14px; }
+    .mtab { flex:1; padding:9px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface); color:var(--muted); cursor:pointer; font-size:12px; font-weight:700; text-align:center; transition:all .2s; }
+    .mtab.active { background:var(--accent); border-color:var(--accent); color:#000; }
+    .mpanel { display:none; }
+    .mpanel.active { display:block; }
+    #qr-img { max-width:190px; border-radius:12px; border:2px solid var(--accent); margin:10px auto; display:block; box-shadow:var(--glow); }
+    #pair-disp { background:var(--surface); border:2px dashed var(--accent); border-radius:12px; padding:16px; font-size:32px; font-weight:800; letter-spacing:10px; color:var(--accent); text-align:center; margin:12px 0; display:none; }
+    input[type=tel],input[type=text],input[type=password],select { width:100%; padding:11px 13px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface); color:var(--text); font-size:14px; outline:none; transition:border .2s; margin-bottom:10px; }
+    input:focus,select:focus { border-color:var(--accent); }
+    select option { background:var(--card); }
+    .cat-sec { background:var(--card); border:1px solid var(--border); border-radius:var(--r); margin-bottom:10px; overflow:hidden; }
+    .cat-hd { padding:11px 14px; display:flex; align-items:center; justify-content:space-between; background:var(--card2); cursor:pointer; user-select:none; }
+    .cat-hd-name { font-size:13px; font-weight:700; display:flex; align-items:center; gap:7px; }
+    .cat-count { font-size:10px; background:var(--accent); color:#000; padding:2px 7px; border-radius:999px; font-weight:700; }
+    .cat-body { padding:10px 14px; }
+    .cmd-row { display:flex; align-items:flex-start; justify-content:space-between; padding:7px 0; border-bottom:1px solid rgba(255,255,255,.04); }
+    .cmd-row:last-child { border-bottom:none; }
+    .cmd-name { font-size:13px; font-weight:700; color:var(--accent); font-family:monospace; }
+    .cmd-desc { font-size:11px; color:var(--muted); margin-top:2px; }
+    .cbadge { font-size:9px; padding:2px 6px; border-radius:4px; font-weight:700; background:rgba(168,85,247,.15); color:var(--purple); white-space:nowrap; flex-shrink:0; }
+    .cbadge.owner { background:rgba(255,165,0,.15); color:var(--orange); }
+    .grp-card { background:var(--card); border:1px solid var(--border); border-radius:var(--r); padding:13px 15px; margin-bottom:9px; }
+    .grp-name { font-size:14px; font-weight:700; margin-bottom:3px; }
+    .grp-meta { font-size:11px; color:var(--muted); margin-bottom:11px; }
+    .grp-btns { display:flex; gap:8px; }
+    .tog-btn { flex:1; padding:8px 10px; border-radius:8px; border:1.5px solid var(--border); background:var(--surface); color:var(--muted); font-size:12px; font-weight:700; cursor:pointer; text-align:center; transition:all .2s; }
+    .tog-btn.on { border-color:var(--green); color:var(--green); background:rgba(0,255,136,.08); }
+    .tog-btn.loading { opacity:.4; pointer-events:none; }
+    #logs { background:#050608; border:1px solid var(--border); border-radius:var(--rs); padding:11px; height:320px; overflow-y:auto; font-family:'Courier New',monospace; font-size:11px; }
+    .le { padding:2px 0; }
+    .le .ts { color:#3a4460; margin-right:7px; }
+    .le.info .msg { color:#60a5fa; }
+    .le.warn .msg { color:var(--yellow); }
+    .le.error .msg { color:var(--red); }
+    .le.success .msg { color:var(--green); }
+    .api-lbl { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; display:flex; align-items:center; gap:6px; }
+    .api-dot { width:7px; height:7px; border-radius:50%; background:var(--red); display:inline-block; flex-shrink:0; }
+    .api-dot.ok { background:var(--green); }
+    .api-hint { font-size:10px; color:var(--muted); margin-top:-6px; margin-bottom:8px; }
+    .nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:rgba(13,17,23,.95); border-top:1px solid var(--border); display:flex; z-index:100; backdrop-filter:blur(12px); }
+    .ni { flex:1; padding:9px 4px; text-align:center; cursor:pointer; border:none; background:none; color:var(--muted); display:flex; flex-direction:column; align-items:center; gap:3px; transition:color .2s; }
+    .ni.active { color:var(--accent); }
+    .ni .ni-icon { font-size:18px; }
+    .ni .ni-lbl { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+    .tc { text-align:center; }
+    .mt { margin-top:10px; }
+    .muted { color:var(--muted); font-size:12px; }
+    .alert { padding:9px 13px; border-radius:8px; font-size:12px; margin-bottom:10px; }
+    .a-ok  { background:rgba(0,255,136,.1); border:1px solid rgba(0,255,136,.3); color:var(--green); }
+    .a-err { background:rgba(255,71,87,.1);  border:1px solid rgba(255,71,87,.3);  color:var(--red); }
+    .a-inf { background:rgba(0,212,255,.1);  border:1px solid rgba(0,212,255,.3);  color:var(--accent); }
+    .hidden { display:none !important; }
+    .empty { text-align:center; padding:36px 18px; color:var(--muted); }
+    .empty .ei { font-size:44px; margin-bottom:10px; }
+    .ld::after { content:'...'; animation:ld 1.2s steps(4,end) infinite; }
+    @keyframes ld { 0%,20%{content:'.'} 40%{content:'..'} 60%,100%{content:'...'} }
+  </style>
+</head>
+<body>
+
+<div class="stats-bar">
+  <div class="si"><div class="v" id="s-up">0s</div><div class="l">Tan Aktif</div></div>
+  <div class="si"><div class="v" id="s-msg">0</div><div class="l">Mesaj</div></div>
+  <div class="si"><div class="v" id="s-err">0</div><div class="l">Erè</div></div>
+</div>
+
+<!-- HOME -->
+<div class="tab active" id="tab-home">
+  <div class="logo-card">
+    <img src="/ghostbot-logo.png" class="logo-img" onerror="this.style.display='none'" alt="GhostBot">
+    <div class="logo-name">GhostBot</div>
+    <div class="logo-dev">💻 KING DEV WEB</div>
+    <div id="conn-status" class="connecting"><span class="dot"></span><span id="conn-txt">K ap konekte…</span></div>
+  </div>
+  <div class="info-row">
+    <div class="info-box"><div class="v" id="i-name">—</div><div class="l">Bot</div></div>
+    <div class="info-box"><div class="v" id="i-mode" style="color:var(--purple)">—</div><div class="l">Mode</div></div>
+    <div class="info-box"><div class="v" id="i-pfx" style="color:var(--yellow)">—</div><div class="l">Prefix</div></div>
+  </div>
+  <div id="home-alert" class="hidden"></div>
+  <button class="btn" onclick="goTab('connect')">🔗 Konekte WhatsApp</button>
+  <button class="btn btn-ghost" onclick="loadGroups();goTab('groups')">👥 Wè Gwoup Yo</button>
+  <button class="btn btn-danger" onclick="doRestart()">🔄 Redémarre Bot</button>
+  <button class="btn btn-ghost" style="margin-top:4px" onclick="doAdminLogout()">🚪 Dekonekte Admin</button>
+</div>
+
+<!-- KONEKSYON -->
+<div class="tab" id="tab-connect">
+  <div class="card">
+    <div class="card-title">🔗 Konekte WhatsApp</div>
+    <div class="mtabs">
+      <div class="mtab active" onclick="switchM('qr')">📷 QR Code</div>
+      <div class="mtab" onclick="switchM('pair')">📱 Pairing Code</div>
+    </div>
+    <div class="mpanel active" id="mp-qr">
+      <div class="tc">
+        <p id="qr-msg" class="muted" style="margin-bottom:8px">K ap tann QR code…</p>
+        <img id="qr-img" alt="QR" style="display:none"/>
+        <p class="muted mt" style="font-size:11px">WhatsApp → <b>Appareils Liés</b> → <b>Lier un appareil</b></p>
+      </div>
+    </div>
+    <div class="mpanel" id="mp-pair">
+      <p class="muted" style="font-size:12px;margin-bottom:10px">Antre nimewo WhatsApp (kòd peyi, san +)</p>
+      <input type="tel" id="phone" placeholder="Egz: 50912345678"/>
+      <button class="btn" id="pair-btn" onclick="doPairing()">Jwenn Kòd Pairing</button>
+      <div id="pair-disp"></div>
+      <p id="pair-st" class="muted mt" style="font-size:12px"></p>
+    </div>
+  </div>
+  <button class="btn btn-danger" onclick="doWaLogout()">🚪 Dekonekte WhatsApp</button>
+</div>
+
+<!-- KÒMAND -->
+<div class="tab" id="tab-commands">
+  <div class="card-title" style="margin-bottom:12px">≡ Tout Kòmand</div>
+  <div id="cmds-box"><div class="empty"><div class="ei">🤖</div><p>K ap chaje<span class="ld"></span></p></div></div>
+</div>
+
+<!-- GWOUP -->
+<div class="tab" id="tab-groups">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div class="card-title" style="margin:0">👥 Gwoup Yo</div>
+    <button class="btn btn-sm" onclick="loadGroups()">🔄 Aktyalize</button>
+  </div>
+  <div id="grp-box"><div class="empty"><div class="ei">👥</div><p>Konekte WhatsApp pou wè gwoup yo</p></div></div>
+</div>
+
+<!-- LOGS -->
+<div class="tab" id="tab-logs">
+  <div class="card-title" style="margin-bottom:10px">>_ Jounal Sistèm</div>
+  <div id="logs"></div>
+  <button class="btn btn-ghost mt" onclick="document.getElementById('logs').innerHTML=''">🗑️ Efase</button>
+</div>
+
+<!-- API -->
+<div class="tab" id="tab-api">
+  <div class="card-title" style="margin-bottom:12px">⚙️ API & Paramèt</div>
+  <div id="api-alert" class="hidden"></div>
+
+  <div class="card">
+    <div class="card-title">🤖 AI Provider</div>
+    <div class="api-lbl">Provider <span id="dot-prov" class="api-dot ok"></span></div>
+    <select id="ai-prov"><option value="gemini">Gemini (Google — Gratis)</option><option value="openai">OpenAI (ChatGPT)</option></select>
+    <div class="api-lbl">Gemini API Key <span id="dot-gem" class="api-dot"></span></div>
+    <input type="password" id="k-gem" placeholder="AIza..."/>
+    <div class="api-hint">🔗 <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a> — GRATIS</div>
+    <div class="api-lbl">OpenAI API Key <span id="dot-oai" class="api-dot"></span></div>
+    <input type="password" id="k-oai" placeholder="sk-proj-..."/>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📥 Downloader</div>
+    <div class="api-lbl">TikTok API <span id="dot-ttk" class="api-dot"></span></div>
+    <input type="text" id="k-ttk" placeholder="Kle TikTok API..."/>
+    <div class="api-hint">🔗 rapidapi.com → "TikTok API"</div>
+    <div class="api-lbl">YouTube / YTDL <span id="dot-yt" class="api-dot"></span></div>
+    <input type="text" id="k-yt" placeholder="Kle YTDL API..."/>
+    <div class="api-hint">🔗 rapidapi.com → "YouTube Downloader"</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🖼️ Media APIs</div>
+    <div class="api-lbl">Remove.bg <span id="dot-rbg" class="api-dot"></span></div>
+    <input type="text" id="k-rbg" placeholder="Kle RemoveBG..."/>
+    <div class="api-hint">🔗 remove.bg/api — 50/mwa GRATIS</div>
+    <div class="api-lbl">OpenWeather <span id="dot-ow" class="api-dot"></span></div>
+    <input type="text" id="k-ow" placeholder="Kle OpenWeather..."/>
+    <div class="api-hint">🔗 openweathermap.org/api — GRATIS</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">⚙️ Paramèt Bot</div>
+    <div class="api-lbl">Mode</div>
+    <select id="s-mode">
+      <option value="public">Public — Tout moun</option>
+      <option value="private">Privé — Owner sèlman</option>
+      <option value="group">Gwoup — Gwoup sèlman</option>
+    </select>
+    <div class="api-lbl">Prefix</div>
+    <input type="text" id="s-pfx" placeholder="." maxlength="3" style="width:70px;display:inline-block"/>
+  </div>
+
+  <button class="btn btn-green mt" onclick="saveSettings()">💾 Sove & Redémarre</button>
+  <p class="muted tc mt" style="font-size:10px">KING DEV WEB · Admin kfixed91@gmail.com</p>
+</div>
+
+<nav class="nav">
+  <button class="ni active" id="ni-home"     onclick="goTab('home')">             <span class="ni-icon">🏠</span><span class="ni-lbl">Akèy</span></button>
+  <button class="ni"        id="ni-connect"  onclick="goTab('connect')">          <span class="ni-icon">🔗</span><span class="ni-lbl">Koneksyon</span></button>
+  <button class="ni"        id="ni-commands" onclick="loadCmds();goTab('commands')"><span class="ni-icon">≡</span><span class="ni-lbl">Kòmand</span></button>
+  <button class="ni"        id="ni-groups"   onclick="loadGroups();goTab('groups')"><span class="ni-icon">👥</span><span class="ni-lbl">Gwoup</span></button>
+  <button class="ni"        id="ni-logs"     onclick="goTab('logs')">             <span class="ni-icon">>_</span><span class="ni-lbl">Logs</span></button>
+  <button class="ni"        id="ni-api"      onclick="loadSettings();goTab('api')"><span class="ni-icon">⚙️</span><span class="ni-lbl">API</span></button>
+</nav>
+
+<script>
+const socket = io({ reconnectionAttempts: 10 });
+const TABS = ['home','connect','commands','groups','logs','api'];
+
+function goTab(t) {
+  TABS.forEach(x => {
+    document.getElementById('tab-'+x)?.classList.toggle('active',x===t);
+    document.getElementById('ni-'+x)?.classList.toggle('active',x===t);
+  });
+}
+function switchM(m) {
+  ['qr','pair'].forEach((x,i) => {
+    document.getElementById('mp-'+x)?.classList.toggle('active',x===m);
+    document.querySelectorAll('.mtab')[i]?.classList.toggle('active',x===m);
+  });
+}
+function fmt(n) {
+  if(!n) return '0s';
+  if(n>=3600) return `${Math.floor(n/3600)}h ${Math.floor((n%3600)/60)}m`;
+  if(n>=60) return `${Math.floor(n/60)}m ${n%60}s`;
+  return `${n}s`;
+}
+function applyState(s) {
+  document.getElementById('s-up').textContent  = fmt(s.uptime||0);
+  document.getElementById('s-msg').textContent = s.stats?.messagesProcessed||0;
+  document.getElementById('s-err').textContent = s.stats?.errors||0;
+  const b=document.getElementById('conn-status'),tx=document.getElementById('conn-txt');
+  b.className = s.connection||'close';
+  tx.textContent = s.connection==='open' ? `✅ ${s.userName||s.userJid||'Bot'}` : s.connection==='connecting' ? 'K ap konekte…' : '❌ Pa Konekte';
+  document.getElementById('i-name').textContent = s.config?.BOT_NAME||'—';
+  document.getElementById('i-mode').textContent = (s.config?.MODE||'—').toUpperCase();
+  document.getElementById('i-pfx').textContent  = s.config?.PREFIX||'—';
+  const qi=document.getElementById('qr-img'),qm=document.getElementById('qr-msg');
+  if(s.qr && s.connection!=='open'){ qi.src=s.qr; qi.style.display='block'; qm.textContent='📷 Eskane QR code la'; }
+  else if(s.connection==='open'){ qi.style.display='none'; qm.textContent=`✅ Konekte: ${s.userName||'Bot'}`; }
+  else { qi.style.display='none'; qm.textContent='K ap tann QR code…'; }
+  const pd=document.getElementById('pair-disp');
+  if(s.pairingCode){ pd.textContent=s.pairingCode; pd.style.display='block'; document.getElementById('pair-st').textContent='Antre kòd nan WhatsApp → Lier avec numéro'; }
+  else if(s.connection==='open'){ pd.style.display='none'; document.getElementById('pair-st').textContent=`✅ Konekte: ${s.userName||''}`; }
+}
+async function fetchState(){ try{ applyState(await (await fetch('/api/state')).json()); }catch(_){} }
+setInterval(fetchState,3000); fetchState();
+
+socket.on('state', applyState);
+socket.on('connectionState', d=>{ fetchState(); if(d.state==='open') loadGroups(); });
+socket.on('qr', url=>{ const q=document.getElementById('qr-img'); q.src=url; q.style.display='block'; document.getElementById('qr-msg').textContent='📷 Eskane QR code la'; });
+socket.on('pairingCode', d=>{ const p=document.getElementById('pair-disp'); p.textContent=d.code; p.style.display='block'; document.getElementById('pair-st').textContent='Antre kòd nan WhatsApp'; });
+socket.on('stats', s=>{ document.getElementById('s-msg').textContent=s.messagesProcessed||0; document.getElementById('s-err').textContent=s.errors||0; });
+const logsEl=document.getElementById('logs');
+socket.on('log', addLog);
+function addLog(e){ const d=document.createElement('div'); d.className=`le ${e.level}`; const ts=new Date(e.time).toLocaleTimeString(); d.innerHTML=`<span class="ts">${ts}</span><span class="msg">${esc(e.msg)}</span>`; logsEl.prepend(d); if(logsEl.children.length>250) logsEl.removeChild(logsEl.lastChild); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function doPairing(){
+  const ph=document.getElementById('phone').value.replace(/\D/g,'');
+  if(!ph||ph.length<7){ alert('Nimewo valid (egz: 50912345678)'); return; }
+  document.getElementById('pair-btn').disabled=true;
+  document.getElementById('pair-st').textContent='K ap mande kòd…';
+  try{
+    const r=await fetch('/api/pairing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phoneNumber:ph})});
+    const d=await r.json();
+    if(!d.ok){ document.getElementById('pair-st').textContent='❌ '+(d.msg||'Echèk'); document.getElementById('pair-btn').disabled=false; }
+  }catch(e){ document.getElementById('pair-st').textContent='❌ '+e.message; document.getElementById('pair-btn').disabled=false; }
+}
+async function doWaLogout(){ if(!confirm('Dekonekte WhatsApp epi efase sesyon?')) return; await fetch('/api/logout',{method:'POST'}); showAlert('home-alert','inf','🔄 Dekonekte…'); }
+async function doRestart(){ if(!confirm('Redémarre bot la?')) return; await fetch('/api/restart',{method:'POST'}); showAlert('home-alert','inf','🔄 K ap redémarre…'); }
+async function doAdminLogout(){ await fetch('/auth/logout',{method:'POST'}); window.location.href='/'; }
+
+const CICONS={ai:'🤖',downloader:'📥',fun:'🎮',group:'👥',media:'🎨',owner:'👑',tools:'🛠️',economy:'💎',general:'📋'};
+let cmdsLoaded=false;
+async function loadCmds(){
+  if(cmdsLoaded) return;
+  try{
+    const d=await (await fetch('/api/commands')).json(); cmdsLoaded=true;
+    const box=document.getElementById('cmds-box');
+    box.innerHTML=`<div class="tc" style="margin-bottom:12px"><span style="background:var(--accent);color:#000;padding:3px 12px;border-radius:999px;font-size:11px;font-weight:700">Total: ${d.total} kòmand</span></div>`;
+    for(const[cat,cmds] of Object.entries(d.categories)){
+      const icon=CICONS[cat]||'📋';
+      const rows=cmds.map(c=>`<div class="cmd-row"><div><div class="cmd-name">.${c.name}${c.aliases?.length?` <small style="color:var(--muted);font-size:9px">(${c.aliases.join(',')})</small>`:''}</div>${c.description?`<div class="cmd-desc">${esc(c.description)}</div>`:''}</div>${c.ownerOnly?'<span class="cbadge owner">👑 Owner</span>':c.premiumOnly?'<span class="cbadge">💎 Prem</span>':''}</div>`).join('');
+      const sec=document.createElement('div'); sec.className='cat-sec';
+      sec.innerHTML=`<div class="cat-hd" onclick="const b=this.nextSibling;b.style.display=b.style.display==='none'?'block':'none'"><div class="cat-hd-name">${icon} ${cat.toUpperCase()}</div><span class="cat-count">${cmds.length}</span></div><div class="cat-body">${rows}</div>`;
+      box.appendChild(sec);
+    }
+  }catch(e){ document.getElementById('cmds-box').innerHTML=`<div class="alert a-err">❌ ${e.message}</div>`; }
+}
+
+async function loadGroups(){
+  const box=document.getElementById('grp-box');
+  box.innerHTML='<div class="empty"><div class="ei">⏳</div><p>K ap chaje<span class="ld"></span></p></div>';
+  try{
+    const d=await (await fetch('/api/groups')).json(); box.innerHTML='';
+    if(!d.ok){ box.innerHTML=`<div class="empty"><div class="ei">🔌</div><p>${esc(d.msg||'Pa konekte')}</p><small class="muted">Ale nan Koneksyon</small></div>`; return; }
+    if(!d.groups?.length){ box.innerHTML='<div class="empty"><div class="ei">👥</div><p>Pa gen gwoup</p></div>'; return; }
+    const hd=document.createElement('div'); hd.style.cssText='text-align:center;margin-bottom:12px';
+    hd.innerHTML=`<span style="background:var(--purple);color:#fff;padding:3px 12px;border-radius:999px;font-size:11px;font-weight:700">${d.groups.length} Gwoup</span>`;
+    box.appendChild(hd);
+    for(const g of d.groups){
+      const id=g.id.replace(/[^a-z0-9]/gi,'_');
+      const c=document.createElement('div'); c.className='grp-card';
+      c.innerHTML=`<div class="grp-name">${esc(g.subject)}</div><div class="grp-meta">👥 ${g.size} manm</div><div class="grp-btns"><button class="tog-btn ${g.botEnabled?'on':''}" id="b-bot-${id}" onclick="togGrp('${g.id}','botEnabled',this)">${g.botEnabled?'🟢':'⚫'} Bot Aktif</button><button class="tog-btn ${g.autoReact?'on':''}" id="b-rct-${id}" onclick="togGrp('${g.id}','autoReact',this)">${g.autoReact?'🟢':'⚫'} Oto Reaji</button></div>`;
+      box.appendChild(c);
+    }
+  }catch(e){ box.innerHTML=`<div class="alert a-err">❌ ${e.message}</div>`; }
+}
+async function togGrp(id,setting,btn){
+  btn.classList.add('loading');
+  try{
+    const d=await (await fetch('/api/groups/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,setting})})).json();
+    if(d.ok){ btn.classList.toggle('on',d.newVal); btn.innerHTML=(d.newVal?'🟢':'⚫')+(setting==='botEnabled'?' Bot Aktif':' Oto Reaji'); }
+  }catch(_){}
+  btn.classList.remove('loading');
+}
+
+async function loadSettings(){
+  try{
+    const d=await (await fetch('/api/settings')).json(); if(!d.ok) return;
+    const s=d.settings;
+    const sv=(id,v)=>{const e=document.getElementById(id);if(e&&v)e.value=v;};
+    const dot=(id,v)=>{const e=document.getElementById(id);if(e)e.classList.toggle('ok',!!v);};
+    sv('ai-prov',s.AI_PROVIDER); sv('s-mode',s.MODE); sv('s-pfx',s.PREFIX);
+    dot('dot-gem',s.GEMINI_CONFIGURED); dot('dot-oai',s.OPENAI_CONFIGURED);
+    dot('dot-ttk',s.TIKTOK_CONFIGURED); dot('dot-yt',s.YTDL_CONFIGURED);
+    dot('dot-rbg',s.REMOVEBG_CONFIGURED); dot('dot-ow',s.WEATHER_CONFIGURED);
+  }catch(_){}
+}
+async function saveSettings(){
+  const payload={
+    AI_PROVIDER:        document.getElementById('ai-prov').value,
+    GEMINI_API_KEY:     document.getElementById('k-gem').value.trim(),
+    OPENAI_API_KEY:     document.getElementById('k-oai').value.trim(),
+    TIKTOK_API:         document.getElementById('k-ttk').value.trim(),
+    YTDL_API:           document.getElementById('k-yt').value.trim(),
+    REMOVEBG_API_KEY:   document.getElementById('k-rbg').value.trim(),
+    OPENWEATHER_API_KEY:document.getElementById('k-ow').value.trim(),
+    MODE:               document.getElementById('s-mode').value,
+    PREFIX:             document.getElementById('s-pfx').value.trim()||'.',
+  };
+  Object.keys(payload).forEach(k=>{ if(!payload[k]) delete payload[k]; });
+  try{
+    const d=await (await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})).json();
+    if(d.ok){ showAlert('api-alert','ok','✅ Sove! K ap redémarre…'); setTimeout(()=>fetch('/api/restart',{method:'POST'}),1500); }
+    else showAlert('api-alert','err','❌ '+(d.msg||'Erè'));
+  }catch(e){ showAlert('api-alert','err','❌ '+e.message); }
+}
+
+function showAlert(id,type,msg){
+  const e=document.getElementById(id); if(!e) return;
+  e.className=`alert a-${type}`; e.textContent=msg;
+  setTimeout(()=>e.className='hidden',5000);
+}
+</script>
+</body>
+</html>
