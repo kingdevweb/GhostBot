@@ -371,6 +371,20 @@ async function startBot() {
         console.log(chalk.green.bold(`\n👻 GhostBot — ONLINE! (${sock.user?.id})\n`));
         try { loadCommands(); } catch(_) {}
 
+        // ── Mete foto pwofil bot la (logo GhostBot) ────────
+        setTimeout(async () => {
+          try {
+            const logoPath = path.join(__dirname, "src/assets/ghostbot.png");
+            if (fs.existsSync(logoPath)) {
+              const img = fs.readFileSync(logoPath);
+              await sock.updateProfilePicture(sock.user.id, img);
+              addLog("success", "🖼️ Foto pwofil bot la aktyalize ✅");
+            }
+          } catch(e) {
+            addLog("warn", `Foto pwofil: ${e.message}`);
+          }
+        }, 5000);
+
         // Keep-alive ping chak 25s
         keepAliveTimer = setInterval(async () => {
           try { if (sock && global.__BOT_STATE.connection === "open") await sock.sendPresenceUpdate("available"); } catch(_) {}
