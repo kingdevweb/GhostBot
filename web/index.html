@@ -247,8 +247,26 @@
     <input type="text" id="s-pfx" placeholder="." maxlength="3" style="width:70px;display:inline-block"/>
   </div>
 
+  <div class="card">
+    <div class="card-title">🔐 Aksè Admin (Prive)</div>
+    <div style="background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.15);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:11px;color:var(--muted)">
+      👁️ Sèlman <b style="color:var(--accent)">ou</b> ki ka wè enfòmasyon sa yo — yo kache pou tout moun lòt.
+    </div>
+    <div class="api-lbl">Email Admin</div>
+    <div style="position:relative;margin-bottom:10px">
+      <input type="password" id="k-adm-email" placeholder="kfixed91@gmail.com" autocomplete="off" style="margin:0;padding-right:44px"/>
+      <button type="button" onclick="togEye('k-adm-email','eye-email')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px" id="eye-email">👁️</button>
+    </div>
+    <div class="api-lbl">Modpas Admin</div>
+    <div style="position:relative;margin-bottom:10px">
+      <input type="password" id="k-adm-pass" placeholder="Nouvo modpas…" autocomplete="new-password" style="margin:0;padding-right:44px"/>
+      <button type="button" onclick="togEye('k-adm-pass','eye-pass')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px" id="eye-pass">👁️</button>
+    </div>
+    <div class="api-hint" style="margin-top:4px">⚠️ Chanje sa pral dekonekte sesyon aktyèl yo</div>
+  </div>
+
   <button class="btn btn-green mt" onclick="saveSettings()">💾 Sove & Redémarre</button>
-  <p class="muted tc mt" style="font-size:10px">KING DEV WEB · Admin kfixed91@gmail.com</p>
+  <p class="muted tc mt" style="font-size:10px">💻 KING DEV WEB</p>
 </div>
 
 <nav class="nav">
@@ -373,6 +391,14 @@ async function togGrp(id,setting,btn){
   btn.classList.remove('loading');
 }
 
+function togEye(inputId, btnId) {
+  const inp = document.getElementById(inputId);
+  const btn = document.getElementById(btnId);
+  if (!inp) return;
+  if (inp.type === 'password') { inp.type = 'text';     btn.textContent = '🙈'; }
+  else                         { inp.type = 'password'; btn.textContent = '👁️'; }
+}
+
 async function loadSettings(){
   try{
     const d=await (await fetch('/api/settings')).json(); if(!d.ok) return;
@@ -380,6 +406,8 @@ async function loadSettings(){
     const sv=(id,v)=>{const e=document.getElementById(id);if(e&&v)e.value=v;};
     const dot=(id,v)=>{const e=document.getElementById(id);if(e)e.classList.toggle('ok',!!v);};
     sv('ai-prov',s.AI_PROVIDER); sv('s-mode',s.MODE); sv('s-pfx',s.PREFIX);
+    // Mete email admin (kache depi depa)
+    sv('k-adm-email', s.ADMIN_EMAIL_MASKED || '');
     dot('dot-gem',s.GEMINI_CONFIGURED); dot('dot-oai',s.OPENAI_CONFIGURED);
     dot('dot-ttk',s.TIKTOK_CONFIGURED); dot('dot-yt',s.YTDL_CONFIGURED);
     dot('dot-rbg',s.REMOVEBG_CONFIGURED); dot('dot-ow',s.WEATHER_CONFIGURED);
@@ -396,6 +424,8 @@ async function saveSettings(){
     OPENWEATHER_API_KEY:document.getElementById('k-ow').value.trim(),
     MODE:               document.getElementById('s-mode').value,
     PREFIX:             document.getElementById('s-pfx').value.trim()||'.',
+    ADMIN_EMAIL:        document.getElementById('k-adm-email').value.trim(),
+    ADMIN_PASSWORD:     document.getElementById('k-adm-pass').value.trim(),
   };
   Object.keys(payload).forEach(k=>{ if(!payload[k]) delete payload[k]; });
   try{

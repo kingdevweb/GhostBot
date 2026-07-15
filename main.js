@@ -237,12 +237,22 @@ app.post("/api/groups/toggle", requireAuth, (req, res) => {
 app.get("/api/settings", requireAuth, (req, res) => {
   try {
     const saved = loadApiSettings();
+    // Email aktif la (sove oswa env var) — voye kache (masked)
+    const activeEmail = saved.ADMIN_EMAIL || process.env.ADMIN_EMAIL || ADMIN_EMAIL;
+    // Mask: montre sèlman 3 premye karaktè + *** + @domain
+    function maskEmail(e) {
+      const [u, d] = e.split("@");
+      if (!d) return "***";
+      return u.slice(0, 3) + "***@" + d;
+    }
     res.json({
       ok: true,
       settings: {
         AI_PROVIDER:         saved.AI_PROVIDER        || process.env.AI_PROVIDER        || "gemini",
         MODE:                saved.BOT_MODE            || process.env.BOT_MODE            || config.MODE,
         PREFIX:              saved.PREFIX              || process.env.PREFIX              || config.PREFIX,
+        // Email retounen kòm valè konplè (sèlman admin ki ka wè l)
+        ADMIN_EMAIL_MASKED:  activeEmail,
         GEMINI_CONFIGURED:  !!(saved.GEMINI_API_KEY   || process.env.GEMINI_API_KEY),
         OPENAI_CONFIGURED:  !!(saved.OPENAI_API_KEY   || process.env.OPENAI_API_KEY),
         TIKTOK_CONFIGURED:  !!(saved.TIKTOK_API       || process.env.TIKTOK_API),
@@ -258,11 +268,20 @@ app.get("/api/settings", requireAuth, (req, res) => {
 app.post("/api/settings", requireAuth, (req, res) => {
   try {
     const allowed = ["AI_PROVIDER","GEMINI_API_KEY","OPENAI_API_KEY","TIKTOK_API","YTDL_API",
-                     "REMOVEBG_API_KEY","OPENWEATHER_API_KEY","OCR_API_KEY","BOT_MODE","PREFIX","BOT_NAME"];
+                     "REMOVEBG_API_KEY","OPENWEATHER_API_KEY","OCR_API_KEY","BOT_MODE","PREFIX",
+                     "BOT_NAME","ADMIN_EMAIL","ADMIN_PASSWORD"];
     const payload = {};
     for (const k of allowed) { if (req.body[k]) payload[k] = req.body[k]; }
     if (req.body.MODE) payload.BOT_MODE = req.body.MODE;
     saveApiSettings(payload);
+    // Aktyalize ADMIN_EMAIL + ADMIN_PASSWORD yo nan memwa osi
+    if (payload.ADMIN_EMAIL)    process.env.ADMIN_EMAIL    = payload.ADMIN_EMAIL;
+    if (payload.ADMIN_PASSWORD) process.env.ADMIN_PASSWORD = payload.ADMIN_PASSWORD;
+    // Efase tout sesyon si email/modpas chanje (obligatwa rekonekte)
+    if (payload.ADMIN_EMAIL || payload.ADMIN_PASSWORD) {
+      SESSIONS.clear();
+      addLog("info", "🔐 Email/modpas chanje — tout sesyon efase");
+    }
     addLog("info", `⚙️ Settings: ${Object.keys(payload).join(", ")}`);
     res.json({ ok: true });
   } catch(e) { res.json({ ok: false, msg: e.message }); }
