@@ -105,12 +105,24 @@ function sleep(ms) {
  */
 function extractText(m) {
   if (!m || !m.message) return "";
-  const msg = m.message;
-  if (msg.conversation) return msg.conversation;
+
+  // ── Debale wrapper yo (ephemeral, deviceSent, etc.) ──────────
+  let msg = m.message;
+  if (msg.ephemeralMessage?.message)            msg = msg.ephemeralMessage.message;
+  if (msg.deviceSentMessage?.message)           msg = msg.deviceSentMessage.message;
+  if (msg.viewOnceMessageV2?.message?.message)  msg = msg.viewOnceMessageV2.message.message;
+  if (msg.documentWithCaptionMessage?.message)  msg = msg.documentWithCaptionMessage.message;
+  if (msg.buttonsMessage)                       return msg.buttonsMessage.contentText || "";
+  if (msg.listMessage)                          return msg.listMessage.description || "";
+  if (msg.templateMessage?.hydratedTemplate)    return msg.templateMessage.hydratedTemplate.hydratedContentText || "";
+
+  if (msg.conversation)        return msg.conversation;
   if (msg.extendedTextMessage) return msg.extendedTextMessage.text || "";
-  if (msg.imageMessage) return msg.imageMessage.caption || "";
-  if (msg.videoMessage) return msg.videoMessage.caption || "";
-  if (msg.documentMessage) return msg.documentMessage.caption || "";
+  if (msg.imageMessage)        return msg.imageMessage.caption || "";
+  if (msg.videoMessage)        return msg.videoMessage.caption || "";
+  if (msg.documentMessage)     return msg.documentMessage.caption || "";
+  if (msg.audioMessage)        return "";
+  if (msg.stickerMessage)      return "";
   if (msg.viewOnceMessage) {
     const inner = msg.viewOnceMessage.message;
     if (!inner) return "";

@@ -134,7 +134,7 @@
 <!-- HOME -->
 <div class="tab active" id="tab-home">
   <div class="logo-card">
-    <img src="/ghostbot-logo.png" class="logo-img" onerror="this.style.display='none'" alt="GhostBot">
+    <img src="/ghostbot.png" class="logo-img" onerror="this.style.display='none'" alt="GhostBot">
     <div class="logo-name">GhostBot</div>
     <div class="logo-dev">💻 KING DEV WEB</div>
     <div id="conn-status" class="connecting"><span class="dot"></span><span id="conn-txt">K ap konekte…</span></div>
@@ -204,35 +204,54 @@
   <div class="card-title" style="margin-bottom:12px">⚙️ API & Paramèt</div>
   <div id="api-alert" class="hidden"></div>
 
+  <!-- Kle gratis info banner -->
+  <div style="background:linear-gradient(135deg,rgba(0,212,255,.08),rgba(168,85,247,.08));border:1px solid rgba(0,212,255,.2);border-radius:12px;padding:14px 16px;margin-bottom:14px">
+    <div style="font-weight:700;color:var(--accent);font-size:13px;margin-bottom:8px">🎁 Kle API Gratis — Kijan pou jwenn yo</div>
+    <div style="font-size:11px;line-height:1.9;color:var(--text)">
+      🤖 <b>Gemini</b> → <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com/app/apikey</a> — <span style="color:var(--green)">100% GRATIS</span><br>
+      🧠 <b>ChatGPT</b> → <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--accent)">platform.openai.com/api-keys</a> — Kreye kont, $5 gratis<br>
+      🌤️ <b>OpenWeather</b> → <a href="https://home.openweathermap.org/api_keys" target="_blank" style="color:var(--accent)">openweathermap.org</a> — <span style="color:var(--green)">GRATIS (1000/jou)</span><br>
+      🖼️ <b>Remove.bg</b> → <a href="https://www.remove.bg/api" target="_blank" style="color:var(--accent)">remove.bg/api</a> — <span style="color:var(--green)">50 imaj/mwa GRATIS</span><br>
+      📥 <b>RapidAPI</b> → <a href="https://rapidapi.com/hub" target="_blank" style="color:var(--accent)">rapidapi.com/hub</a> — Kreye kont gratis, chache "TikTok" ak "YouTube"
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-title">🤖 AI Provider</div>
-    <div class="api-lbl">Provider <span id="dot-prov" class="api-dot ok"></span></div>
-    <select id="ai-prov"><option value="gemini">Gemini (Google — Gratis)</option><option value="openai">OpenAI (ChatGPT)</option></select>
+    <div class="api-lbl">Provider aktif</div>
+    <select id="ai-prov"><option value="gemini">Gemini (Google — Gratis ✅)</option><option value="openai">OpenAI (ChatGPT)</option></select>
     <div class="api-lbl">Gemini API Key <span id="dot-gem" class="api-dot"></span></div>
-    <input type="password" id="k-gem" placeholder="AIza..."/>
-    <div class="api-hint">🔗 <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a> — GRATIS</div>
-    <div class="api-lbl">OpenAI API Key <span id="dot-oai" class="api-dot"></span></div>
-    <input type="password" id="k-oai" placeholder="sk-proj-..."/>
+    <div style="position:relative">
+      <input type="password" id="k-gem" placeholder="AIzaSy..." style="padding-right:44px"/>
+      <button type="button" onclick="togEye('k-gem','eye-gem')" id="eye-gem" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px">👁️</button>
+    </div>
+    <div class="api-hint">➜ <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com</a> → Sign in → "Get API key" → Kopye</div>
+    <div class="api-lbl" style="margin-top:10px">OpenAI / ChatGPT Key <span id="dot-oai" class="api-dot"></span></div>
+    <div style="position:relative">
+      <input type="password" id="k-oai" placeholder="sk-proj-..." style="padding-right:44px"/>
+      <button type="button" onclick="togEye('k-oai','eye-oai')" id="eye-oai" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px">👁️</button>
+    </div>
+    <div class="api-hint">➜ <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--accent)">platform.openai.com</a> → Kreye kont → "Create new secret key"</div>
   </div>
 
   <div class="card">
-    <div class="card-title">📥 Downloader</div>
+    <div class="card-title">📥 Downloader APIs</div>
     <div class="api-lbl">TikTok API <span id="dot-ttk" class="api-dot"></span></div>
     <input type="text" id="k-ttk" placeholder="Kle TikTok API..."/>
-    <div class="api-hint">🔗 rapidapi.com → "TikTok API"</div>
-    <div class="api-lbl">YouTube / YTDL <span id="dot-yt" class="api-dot"></span></div>
+    <div class="api-hint">➜ <a href="https://rapidapi.com/hub" target="_blank" style="color:var(--accent)">rapidapi.com</a> → Chache "TikTok Video Downloader" → Subscribe (gratis)</div>
+    <div class="api-lbl" style="margin-top:10px">YouTube / YTDL <span id="dot-yt" class="api-dot"></span></div>
     <input type="text" id="k-yt" placeholder="Kle YTDL API..."/>
-    <div class="api-hint">🔗 rapidapi.com → "YouTube Downloader"</div>
+    <div class="api-hint">➜ <a href="https://rapidapi.com/hub" target="_blank" style="color:var(--accent)">rapidapi.com</a> → Chache "YouTube MP3 Downloader" → Subscribe (gratis)</div>
   </div>
 
   <div class="card">
-    <div class="card-title">🖼️ Media APIs</div>
+    <div class="card-title">🖼️ Media & Meteo</div>
     <div class="api-lbl">Remove.bg <span id="dot-rbg" class="api-dot"></span></div>
     <input type="text" id="k-rbg" placeholder="Kle RemoveBG..."/>
-    <div class="api-hint">🔗 remove.bg/api — 50/mwa GRATIS</div>
-    <div class="api-lbl">OpenWeather <span id="dot-ow" class="api-dot"></span></div>
+    <div class="api-hint">➜ <a href="https://www.remove.bg/api" target="_blank" style="color:var(--accent)">remove.bg/api</a> → Kreye kont → "API Key" → Kopye (50/mwa gratis)</div>
+    <div class="api-lbl" style="margin-top:10px">OpenWeather <span id="dot-ow" class="api-dot"></span></div>
     <input type="text" id="k-ow" placeholder="Kle OpenWeather..."/>
-    <div class="api-hint">🔗 openweathermap.org/api — GRATIS</div>
+    <div class="api-hint">➜ <a href="https://home.openweathermap.org/api_keys" target="_blank" style="color:var(--accent)">openweathermap.org</a> → Kreye kont → API keys → Kopye (gratis)</div>
   </div>
 
   <div class="card">

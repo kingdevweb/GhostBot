@@ -19,7 +19,13 @@ async function messageHandler(sock, m) {
     const privateChat = isPrivate(m);
 
     if (!m.message) return;
-    const msgType = Object.keys(m.message)[0];
+
+    // ── Debale wrapper ephemeral/deviceSent ──────────────────────
+    let rawMsg = m.message;
+    if (rawMsg.ephemeralMessage?.message)   rawMsg = rawMsg.ephemeralMessage.message;
+    if (rawMsg.deviceSentMessage?.message)  rawMsg = rawMsg.deviceSentMessage.message;
+
+    const msgType = Object.keys(rawMsg)[0];
     if (msgType === "protocolMessage" || msgType === "senderKeyDistributionMessage") return;
 
     // ── NO AUTO-READ ─────────────────────────────────────────
